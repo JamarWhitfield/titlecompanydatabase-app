@@ -1,5 +1,8 @@
 # To Do
 
+# Urgent Fixes
+- Potentially a light and dark mode
+
 ## 2. Fix the Small Obvious Gaps
 
 After docs:
@@ -7,7 +10,7 @@ After docs:
 - [ ] Add all 50 states to `US_STATES`
 - [ ] Add expired invite cleanup
 - [ ] Add resend invitation
-- [ ] Add company/profile settings
+- [x] Add company/profile settings
 - [ ] Add better empty states/onboarding text
 
 These are small polish items that make the app feel real.
@@ -20,9 +23,9 @@ This is probably the most important near-term feature.
 
 Add:
 
-- [ ] Search result snippets
-- [ ] Highlighted matched text
-- [ ] Matched filename
+- [x] Search result snippets
+- [x] Highlighted matched text
+- [x] Matched filename
 - [ ] Matched field: title, description, county, state, document content
 - [ ] Filters for company records vs network records
 - [ ] Filters for record type, state, county, shared/private

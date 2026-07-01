@@ -18,6 +18,23 @@ const TYPE_COLORS: Record<string, string> = {
   general: "bg-gray-100 text-gray-600",
 };
 
+// Highlight every case-insensitive occurrence of `term` inside `text`.
+function highlightMatch(text: string, term: string) {
+  const needle = term.trim();
+  if (!needle) return text;
+  const escaped = needle.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const parts = text.split(new RegExp(`(${escaped})`, "gi"));
+  return parts.map((part, i) =>
+    part.toLowerCase() === needle.toLowerCase() ? (
+      <mark key={i} className="rounded bg-amber-200 px-0.5 text-amber-900">
+        {part}
+      </mark>
+    ) : (
+      part
+    )
+  );
+}
+
 interface Props {
   record: CompanyRecordSearchResult;
   files: RecordFile[];
@@ -25,6 +42,7 @@ interface Props {
   selected: boolean;
   onToggleSelect: (checked: boolean) => void;
   isAdmin: boolean;
+  searchQuery?: string;
 }
 
 export default function RecordRow({
@@ -34,6 +52,7 @@ export default function RecordRow({
   selected,
   onToggleSelect,
   isAdmin,
+  searchQuery = "",
 }: Props) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -137,6 +156,11 @@ export default function RecordRow({
               {record.matched_file_name
                 ? `Matched inside ${record.matched_file_name}`
                 : "Matched inside uploaded document"}
+            </div>
+          )}
+          {record.snippet && (
+            <div className="mt-1 max-w-md rounded border-l-2 border-amber-300 bg-amber-50/50 px-2 py-1 text-xs leading-relaxed text-gray-600">
+              {highlightMatch(record.snippet, searchQuery)}
             </div>
           )}
         </td>

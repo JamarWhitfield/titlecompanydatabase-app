@@ -410,6 +410,7 @@ export default function RecordsList({
                     toggleSelect(record.id, checked)
                   }
                   isAdmin={isAdmin}
+                  searchQuery={initialQuery}
                 />
               ))}
             </tbody>

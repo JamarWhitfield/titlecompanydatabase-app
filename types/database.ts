@@ -49,6 +49,7 @@ export type MatchSource = "title" | "description" | "location" | "document";
 export type CompanyRecordSearchResult = CompanyRecord & {
   match_source?: MatchSource | null;
   matched_file_name?: string | null;
+  snippet?: string | null;
   relevance_rank?: number | null;
 };
 
