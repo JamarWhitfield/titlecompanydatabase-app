@@ -288,7 +288,7 @@ export default function Home() {
             >
               Log in
             </Link>
-            <Link href="/register" className={btnPrimary}>
+            <Link href="/contact" className={btnPrimary}>
               Book a demo
             </Link>
           </div>
@@ -334,7 +334,7 @@ export default function Home() {
               controlled industry network.
             </p>
             <div className="mt-9 flex flex-wrap justify-center gap-3">
-              <Link href="/register" className={btnPrimary}>
+              <Link href="/contact" className={btnPrimary}>
                 Book a demo
               </Link>
               <a href="#how-it-works" className={btnSecondary}>
@@ -495,7 +495,7 @@ export default function Home() {
             today. We&rsquo;ll shape a demo around your real operating model.
           </p>
           <div className="mt-9 flex justify-center">
-            <Link href="/register" className={btnPrimary}>
+            <Link href="/contact" className={btnPrimary}>
               Book a demo
             </Link>
           </div>
@@ -527,7 +527,7 @@ export default function Home() {
               Log in
             </Link>
             <Link
-              href="/register"
+              href="/contact"
               className="transition-colors hover:text-[#9db0ff]"
             >
               Book a demo

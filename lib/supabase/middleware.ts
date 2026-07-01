@@ -38,6 +38,7 @@ export async function updateSession(request: NextRequest) {
     pathname === "/" ||
     pathname.startsWith("/login") ||
     pathname.startsWith("/register") ||
+    pathname.startsWith("/contact") ||
     pathname.startsWith("/auth/");
 
   // Unauthenticated user trying to reach a protected route → send to login

@@ -179,6 +179,44 @@ export type Json =
 export interface Database {
   public: {
     Tables: {
+      // Demo-request leads captured by the public /contact page (see
+      // migration 0026). RLS is deny-all for anon/authenticated; rows are
+      // written only by the trusted server action via the service role and
+      // are never read back through the typed client, hence Update: never.
+      contact_submissions: {
+        Row: {
+          id: string;
+          full_name: string;
+          email: string;
+          company_name: string | null;
+          company_website: string | null;
+          role_title: string | null;
+          company_type: string | null;
+          team_size: string | null;
+          current_system: string | null;
+          main_pain_point: string | null;
+          message: string | null;
+          source: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          full_name: string;
+          email: string;
+          company_name?: string | null;
+          company_website?: string | null;
+          role_title?: string | null;
+          company_type?: string | null;
+          team_size?: string | null;
+          current_system?: string | null;
+          main_pain_point?: string | null;
+          message?: string | null;
+          source?: string;
+          created_at?: string;
+        };
+        Update: never;
+        Relationships: [];
+      };
       companies: {
         Row: {
           id: string;

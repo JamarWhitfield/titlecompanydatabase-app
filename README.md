@@ -138,6 +138,56 @@ System-generated notifications (e.g. saved search matches).
 
 ---
 
+## Shared Title Network
+
+Title work is built on relationships between companies. A search firm, a lender's counsel, an abstracting company, and an underwriting agent working the same closing each carry a piece of the file. Today that coordination happens by email, phone, and Dropbox links — no consistent access control, no audit trail, no searchable record.
+
+Casetra's Shared Title Network gives title companies a controlled way to make selected records visible across a trusted group of companies — without ever opening up anything they didn't choose to share.
+
+### Private by default
+
+Every record a company creates is fully private. Only members of that company can see it. Nothing is shared, discoverable, or indexed by any other company until a company admin explicitly publishes it. There is no global feed. There is no opt-out-of-sharing toggle to remember.
+
+### Shared only when useful
+
+Company admins can publish individual records — or bulk-publish up to 200 at once — to the network. Sharing is instant and reversible at any time. When a record is shared:
+
+- Its title, description, county, state, and attached document contents become searchable to all authenticated users on the network.
+- The owning company remains the sole entity that can edit, delete, or unshare the record.
+- Other companies can read the record and download its files via time-limited signed URLs (no persistent file access). They can add their own private notes, visible only to their company.
+- Sharing and unsharing are written to the company's append-only audit log.
+
+What is **never** shared: records the admin has not explicitly published, drafts, internal notes from other companies, or any field marked as private.
+
+### Searchable across trusted title companies
+
+The network makes shared records discoverable in ways a shared email thread or folder never can be:
+
+- **Full-text search** across record titles, descriptions, counties, states, and the extracted text content of attached PDFs, DOCX files, and scanned images.
+- **Trigram search** for structured identifiers — policy numbers, index numbers, parcel codes — that standard full-text tokenization misses.
+- Search results show which company owns the record, what field matched (title, description, location, or document content), and a short excerpt with the matched term highlighted.
+
+### Access control at the database layer
+
+Company isolation is enforced by PostgreSQL Row Level Security — not application logic. RLS is the last line of defense, not the first:
+
+- A non-shared record from Company A is invisible to Company B even if the application layer contains a bug, a misconfigured query, or a compromised API call.
+- The `shared_records_network` view enforces this at the query level: rows are returned only for records where `is_shared = true`. The owning company's other records are never in the result set.
+- File download signed URLs are re-checked server-side: a user from Company B can only obtain a signed URL for a file that belongs to a currently shared record. Unsharing a record immediately removes that authorization path.
+- Only company admins can share. Members cannot, regardless of what the UI shows — a BEFORE UPDATE trigger at the database level rejects any non-admin attempt to flip `is_shared`, even through the API.
+
+### When to use it
+
+The Shared Title Network is designed for workflows where two or more title companies are working cooperatively on the same transaction, property, or jurisdiction — not for broadcasting records to a public directory. Typical uses:
+
+- Sharing an abstract or title commitment with outside counsel or an agent closing on the same property.
+- Making jurisdiction-specific title opinions discoverable to abstractors your company works with regularly.
+- Letting a network partner confirm file details without emailing attachments back and forth.
+
+When in doubt, keep it private. The default is always isolation.
+
+---
+
 ## Shared Network Behavior
 
 - Records are **private by default** (`is_shared = false`).
