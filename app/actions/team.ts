@@ -7,9 +7,49 @@ import { sendInvitationEmail } from "@/lib/email";
 import { revalidatePath } from "next/cache";
 
 const MAX_EMAIL = 255;
+const MAX_COMPANY_NAME = 120;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 type InviteResult = { error?: string; token?: string; emailed?: boolean };
+
+// Rename the caller's company. Admin-only — enforced both here and by the
+// companies UPDATE policy (0020), which restricts the write to admins of the
+// row's own company. Only the display name is changed; the slug is left as-is
+// so existing links and identifiers stay stable.
+export async function renameCompany(
+  name: string
+): Promise<{ error?: string }> {
+  const profile = await getProfile();
+  if (!profile) return { error: "Not authenticated." };
+  if (profile.role !== "admin") {
+    return { error: "Only admins can rename the company." };
+  }
+
+  const trimmed = name?.trim();
+  if (!trimmed) return { error: "Enter a company name." };
+  if (trimmed.length > MAX_COMPANY_NAME) {
+    return { error: `Name must be ${MAX_COMPANY_NAME} characters or fewer.` };
+  }
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("companies")
+    .update({ name: trimmed })
+    .eq("id", profile.company_id)
+    .select("id");
+
+  if (error) {
+    console.error("Failed to rename company:", error.message);
+    return { error: "Failed to rename the company." };
+  }
+  if (!data || data.length === 0) {
+    return { error: "Only admins can rename the company." };
+  }
+
+  revalidatePath("/dashboard/team");
+  revalidatePath("/dashboard", "layout");
+  return {};
+}
 
 // Resolve the site's base URL server-side so we can build the invite link
 // without relying on the browser. Prefers an explicit env override (best for

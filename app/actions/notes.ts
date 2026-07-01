@@ -36,8 +36,8 @@ export async function addNote(
   return {};
 }
 
-// Edit a note. RLS allows only the author or a company admin; a blocked
-// update affects 0 rows, which we surface as a permission error.
+// Edit a note. RLS (0020) allows only the author; a blocked update affects
+// 0 rows, which we surface as a permission error.
 export async function updateNote(
   id: string,
   text: string
@@ -67,7 +67,7 @@ export async function updateNote(
   return {};
 }
 
-// Delete a note. RLS allows only the author or a company admin.
+// Delete a note. RLS (0020) allows only the author.
 export async function deleteNote(id: string): Promise<{ error?: string }> {
   const profile = await getProfile();
   if (!profile) return { error: "Not authenticated." };

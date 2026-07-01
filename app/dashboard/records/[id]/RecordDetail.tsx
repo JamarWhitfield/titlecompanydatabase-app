@@ -191,17 +191,19 @@ export default function RecordDetail({
             >
               Edit
             </button>
-            <button
-              onClick={handleToggleShare}
-              disabled={isPending}
-              className={`rounded-lg px-3 py-1.5 text-sm font-medium shadow-sm transition-colors disabled:opacity-50 ${
-                record.is_shared
-                  ? "border border-amber-200 bg-white text-amber-700 hover:bg-amber-50"
-                  : "bg-green-600 text-white hover:bg-green-700"
-              }`}
-            >
-              {record.is_shared ? "Unshare" : "Share"}
-            </button>
+            {isAdmin && (
+              <button
+                onClick={handleToggleShare}
+                disabled={isPending}
+                className={`rounded-lg px-3 py-1.5 text-sm font-medium shadow-sm transition-colors disabled:opacity-50 ${
+                  record.is_shared
+                    ? "border border-amber-200 bg-white text-amber-700 hover:bg-amber-50"
+                    : "bg-green-600 text-white hover:bg-green-700"
+                }`}
+              >
+                {record.is_shared ? "Unshare" : "Share"}
+              </button>
+            )}
             <button
               onClick={handleDelete}
               disabled={isPending}
@@ -391,7 +393,6 @@ export default function RecordDetail({
         recordId={record.id}
         notes={notes}
         currentUserId={currentUserId}
-        isAdmin={isAdmin}
       />
 
       {isOwn && (

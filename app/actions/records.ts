@@ -240,6 +240,9 @@ export async function toggleShare(
 ): Promise<{ error?: string }> {
   const profile = await getProfile();
   if (!profile) return { error: "Not authenticated." };
+  if (profile.role !== "admin") {
+    return { error: "Only admins can share records to the network." };
+  }
 
   const supabase = await createClient();
   const { data, error } = await supabase
@@ -274,6 +277,9 @@ export async function bulkSetShare(
 ): Promise<BulkShareResult> {
   const profile = await getProfile();
   if (!profile) return { error: "Not authenticated." };
+  if (profile.role !== "admin") {
+    return { error: "Only admins can share records to the network." };
+  }
 
   if (!Array.isArray(ids) || ids.length === 0) {
     return { error: "No records selected." };

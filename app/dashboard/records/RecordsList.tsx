@@ -33,6 +33,7 @@ export default function RecordsList({
   page,
   pageSize,
   totalCount,
+  isAdmin,
 }: {
   records: CompanyRecordSearchResult[];
   files: RecordFile[];
@@ -44,6 +45,7 @@ export default function RecordsList({
   page: number;
   pageSize: number;
   totalCount: number;
+  isAdmin: boolean;
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -326,38 +328,40 @@ export default function RecordsList({
         </div>
       ) : (
         <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
-          <div className="flex flex-wrap items-center gap-3 border-b border-gray-200 bg-gray-50 px-4 py-2.5">
-            <span className="text-sm font-medium text-gray-600">
-              {selectedCount > 0
-                ? `${selectedCount} selected`
-                : "Select records to share or unshare in bulk"}
-            </span>
-            <div className="ml-auto flex items-center gap-2">
-              {selectedCount > 0 && (
+          {isAdmin && (
+            <div className="flex flex-wrap items-center gap-3 border-b border-gray-200 bg-gray-50 px-4 py-2.5">
+              <span className="text-sm font-medium text-gray-600">
+                {selectedCount > 0
+                  ? `${selectedCount} selected`
+                  : "Select records to share or unshare in bulk"}
+              </span>
+              <div className="ml-auto flex items-center gap-2">
+                {selectedCount > 0 && (
+                  <button
+                    onClick={clearSelection}
+                    disabled={isBulkPending}
+                    className="rounded-lg px-3 py-1.5 text-sm font-medium text-gray-500 hover:bg-gray-100 disabled:opacity-50"
+                  >
+                    Clear
+                  </button>
+                )}
                 <button
-                  onClick={clearSelection}
-                  disabled={isBulkPending}
-                  className="rounded-lg px-3 py-1.5 text-sm font-medium text-gray-500 hover:bg-gray-100 disabled:opacity-50"
+                  onClick={() => runBulkShare(true)}
+                  disabled={selectedCount === 0 || isBulkPending}
+                  className="rounded-lg bg-green-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  Clear
+                  {isBulkPending ? "Working…" : "Share selected"}
                 </button>
-              )}
-              <button
-                onClick={() => runBulkShare(true)}
-                disabled={selectedCount === 0 || isBulkPending}
-                className="rounded-lg bg-green-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {isBulkPending ? "Working…" : "Share selected"}
-              </button>
-              <button
-                onClick={() => runBulkShare(false)}
-                disabled={selectedCount === 0 || isBulkPending}
-                className="rounded-lg bg-amber-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-amber-700 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {isBulkPending ? "Working…" : "Unshare selected"}
-              </button>
+                <button
+                  onClick={() => runBulkShare(false)}
+                  disabled={selectedCount === 0 || isBulkPending}
+                  className="rounded-lg bg-amber-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-amber-700 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {isBulkPending ? "Working…" : "Unshare selected"}
+                </button>
+              </div>
             </div>
-          </div>
+          )}
           {bulkMessage && (
             <div
               role="status"
@@ -373,18 +377,20 @@ export default function RecordsList({
           <table className="w-full text-sm">
             <thead className="border-b border-gray-200 bg-gray-50 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
               <tr>
-                <th className="px-4 py-3">
-                  <input
-                    type="checkbox"
-                    aria-label="Select all records on this page"
-                    checked={allSelected}
-                    ref={(el) => {
-                      if (el) el.indeterminate = someSelected;
-                    }}
-                    onChange={(e) => toggleSelectAll(e.target.checked)}
-                    className="h-4 w-4 cursor-pointer rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                  />
-                </th>
+                {isAdmin && (
+                  <th className="px-4 py-3">
+                    <input
+                      type="checkbox"
+                      aria-label="Select all records on this page"
+                      checked={allSelected}
+                      ref={(el) => {
+                        if (el) el.indeterminate = someSelected;
+                      }}
+                      onChange={(e) => toggleSelectAll(e.target.checked)}
+                      className="h-4 w-4 cursor-pointer rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    />
+                  </th>
+                )}
                 <th className="px-4 py-3">Title</th>
                 <th className="px-4 py-3">Type</th>
                 <th className="px-4 py-3">Status</th>
@@ -403,6 +409,7 @@ export default function RecordsList({
                   onToggleSelect={(checked) =>
                     toggleSelect(record.id, checked)
                   }
+                  isAdmin={isAdmin}
                 />
               ))}
             </tbody>

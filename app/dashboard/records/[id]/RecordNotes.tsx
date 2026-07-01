@@ -17,7 +17,6 @@ interface Props {
   recordId: string;
   notes: NoteView[];
   currentUserId: string;
-  isAdmin: boolean;
 }
 
 function formatTime(value: string) {
@@ -34,7 +33,6 @@ export default function RecordNotes({
   recordId,
   notes,
   currentUserId,
-  isAdmin,
 }: Props) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -125,7 +123,7 @@ export default function RecordNotes({
       ) : (
         <ul className="flex flex-col gap-2">
           {notes.map((note) => {
-            const canManage = note.userId === currentUserId || isAdmin;
+            const canManage = note.userId === currentUserId;
             const edited = note.updatedAt !== note.createdAt;
             return (
               <li

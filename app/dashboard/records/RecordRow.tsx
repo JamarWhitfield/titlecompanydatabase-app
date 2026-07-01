@@ -24,6 +24,7 @@ interface Props {
   onEdit: () => void;
   selected: boolean;
   onToggleSelect: (checked: boolean) => void;
+  isAdmin: boolean;
 }
 
 export default function RecordRow({
@@ -32,6 +33,7 @@ export default function RecordRow({
   onEdit,
   selected,
   onToggleSelect,
+  isAdmin,
 }: Props) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -89,18 +91,20 @@ export default function RecordRow({
           isPending ? "opacity-50" : ""
         } ${selected ? "bg-blue-50/60" : ""}`}
       >
-        <td
-          className="px-4 py-3"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <input
-            type="checkbox"
-            checked={selected}
-            onChange={(e) => onToggleSelect(e.target.checked)}
-            aria-label={`Select ${record.title}`}
-            className="h-4 w-4 cursor-pointer rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-          />
-        </td>
+        {isAdmin && (
+          <td
+            className="px-4 py-3"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <input
+              type="checkbox"
+              checked={selected}
+              onChange={(e) => onToggleSelect(e.target.checked)}
+              aria-label={`Select ${record.title}`}
+              className="h-4 w-4 cursor-pointer rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+            />
+          </td>
+        )}
         <td className="px-4 py-3">
           <div className="flex flex-wrap items-center gap-2">
             <span className="font-medium text-gray-900">{record.title}</span>
@@ -175,20 +179,22 @@ export default function RecordRow({
             >
               Edit
             </button>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                handleToggleShare();
-              }}
-              disabled={isPending}
-              className={`rounded px-2.5 py-1.5 text-xs font-medium disabled:opacity-50 ${
-                record.is_shared
-                  ? "text-amber-600 hover:bg-amber-50"
-                  : "text-green-600 hover:bg-green-50"
-              }`}
-            >
-              {record.is_shared ? "Unshare" : "Share"}
-            </button>
+            {isAdmin && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleToggleShare();
+                }}
+                disabled={isPending}
+                className={`rounded px-2.5 py-1.5 text-xs font-medium disabled:opacity-50 ${
+                  record.is_shared
+                    ? "text-amber-600 hover:bg-amber-50"
+                    : "text-green-600 hover:bg-green-50"
+                }`}
+              >
+                {record.is_shared ? "Unshare" : "Share"}
+              </button>
+            )}
             <button
               onClick={(e) => {
                 e.stopPropagation();
@@ -206,7 +212,7 @@ export default function RecordRow({
       {expanded && files.length > 0 && (
         <tr>
           <td
-            colSpan={6}
+            colSpan={isAdmin ? 6 : 5}
             className="border-t border-blue-100 bg-blue-50 px-4 py-3"
           >
             <div className="flex flex-col gap-1.5">

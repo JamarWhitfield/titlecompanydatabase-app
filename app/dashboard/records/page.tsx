@@ -160,6 +160,7 @@ export default async function RecordsPage({
         page={page}
         pageSize={PAGE_SIZE}
         totalCount={totalCount}
+        isAdmin={profile.role === "admin"}
       />
     </div>
   );
