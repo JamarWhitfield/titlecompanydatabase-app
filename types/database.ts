@@ -132,6 +132,42 @@ export type Notification = {
   created_at: string;
 };
 
+// ============================================================
+// Platform Admin Console (see migration 0023)
+// ============================================================
+
+// A platform operator's access level, stored in platform_admins — entirely
+// separate from the per-company admin/member role.
+export type PlatformRole = "owner" | "support" | "auditor";
+
+// A row of the append-only platform audit trail, as returned by the
+// platform_list_platform_audit_logs RPC (actor/company names resolved).
+export type PlatformAuditLog = {
+  id: string;
+  actor_user_id: string | null;
+  actor_name: string | null;
+  action: string;
+  target_company_id: string | null;
+  target_company: string | null;
+  target_user_id: string | null;
+  target_record_id: string | null;
+  metadata: Json;
+  reason: string | null;
+  created_at: string;
+};
+
+// A break-glass support session, as returned by the support-session RPCs.
+export type PlatformSupportSession = {
+  id: string;
+  actor_user_id?: string;
+  company_id: string;
+  company_name: string;
+  reason: string;
+  expires_at: string;
+  created_at: string;
+  active: boolean;
+};
+
 export type Json =
   | string
   | number
@@ -465,6 +501,151 @@ export interface Database {
       remove_member: {
         Args: { target_user: string };
         Returns: undefined;
+      };
+      platform_current_role: {
+        Args: Record<string, never>;
+        Returns: PlatformRole | null;
+      };
+      platform_get_stats: {
+        Args: Record<string, never>;
+        Returns: {
+          total_companies: number;
+          total_users: number;
+          total_records: number;
+          total_shared_records: number;
+          total_files: number;
+        }[];
+      };
+      platform_list_companies: {
+        Args: Record<string, never>;
+        Returns: {
+          id: string;
+          name: string;
+          slug: string;
+          created_at: string;
+          member_count: number;
+          record_count: number;
+          shared_count: number;
+          file_count: number;
+        }[];
+      };
+      platform_get_company_details: {
+        Args: { p_company_id: string };
+        Returns: {
+          id: string;
+          name: string;
+          slug: string;
+          created_at: string;
+          member_count: number;
+          record_count: number;
+          shared_count: number;
+          private_count: number;
+          file_count: number;
+        }[];
+      };
+      platform_list_company_members: {
+        Args: { p_company_id: string };
+        Returns: {
+          user_id: string;
+          full_name: string | null;
+          email: string;
+          role: "admin" | "member";
+          created_at: string;
+        }[];
+      };
+      platform_list_company_audit_logs: {
+        Args: { p_company_id: string };
+        Returns: {
+          id: string;
+          action: string;
+          actor_name: string | null;
+          record_id: string | null;
+          created_at: string;
+        }[];
+      };
+      platform_list_platform_audit_logs: {
+        Args: Record<string, never>;
+        Returns: PlatformAuditLog[];
+      };
+      platform_list_admins: {
+        Args: Record<string, never>;
+        Returns: {
+          user_id: string;
+          email: string;
+          full_name: string | null;
+          role: PlatformRole;
+          enabled: boolean;
+          created_at: string;
+        }[];
+      };
+      platform_add_admin: {
+        Args: { target_email: string; target_role: string };
+        Returns: string;
+      };
+      platform_set_admin_role: {
+        Args: { target_user: string; new_role: string };
+        Returns: undefined;
+      };
+      platform_set_admin_enabled: {
+        Args: { target_user: string; new_enabled: boolean };
+        Returns: undefined;
+      };
+      platform_start_support_session: {
+        Args: { p_company_id: string; p_reason: string };
+        Returns: string;
+      };
+      platform_get_support_session: {
+        Args: { p_session_id: string };
+        Returns: PlatformSupportSession[];
+      };
+      platform_list_my_support_sessions: {
+        Args: Record<string, never>;
+        Returns: PlatformSupportSession[];
+      };
+      platform_end_support_session: {
+        Args: { p_session_id: string };
+        Returns: undefined;
+      };
+      platform_support_list_records: {
+        Args: { p_session_id: string };
+        Returns: {
+          id: string;
+          title: string;
+          record_type: string;
+          county: string | null;
+          state: string | null;
+          is_shared: boolean;
+          created_at: string;
+          file_count: number;
+        }[];
+      };
+      platform_support_get_record: {
+        Args: { p_session_id: string; p_record_id: string };
+        Returns: {
+          id: string;
+          title: string;
+          description: string | null;
+          record_type: string;
+          county: string | null;
+          state: string | null;
+          is_shared: boolean;
+          created_at: string;
+          updated_at: string;
+        }[];
+      };
+      platform_support_list_files: {
+        Args: { p_session_id: string; p_record_id: string };
+        Returns: {
+          id: string;
+          name: string;
+          size: number;
+          mime_type: string;
+          created_at: string;
+        }[];
+      };
+      platform_support_authorize_download: {
+        Args: { p_session_id: string; p_file_id: string };
+        Returns: string;
       };
     };
     Enums: Record<string, never>;

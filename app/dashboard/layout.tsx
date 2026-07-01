@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { getProfile } from "@/lib/dal";
+import { getCurrentPlatformRole } from "@/lib/platform-auth";
 import { createClient } from "@/lib/supabase/server";
 import { logout } from "@/app/actions/auth";
 import NavLinks from "./NavLinks";
@@ -18,6 +19,10 @@ export default async function DashboardLayout({
   }
 
   const company = profile.companies;
+
+  // Platform role is stored separately from the company role; null for the
+  // vast majority of users. Drives the (hidden-by-default) Platform nav item.
+  const platformRole = await getCurrentPlatformRole();
 
   // Unread notification count for the nav badge (RLS scopes to own company).
   const supabase = await createClient();
@@ -49,6 +54,7 @@ export default async function DashboardLayout({
         <div className="flex items-center gap-6">
           <NavLinks
             isAdmin={profile.role === "admin"}
+            isPlatformAdmin={platformRole !== null}
             unreadCount={unreadCount ?? 0}
           />
 

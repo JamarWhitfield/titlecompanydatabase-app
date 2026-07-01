@@ -180,22 +180,24 @@ export default function RecordFormModal({ open, onClose, record, files }: Props)
             </div>
           </div>
 
-          <div className="flex flex-col gap-1">
-            <label
-              htmlFor="modal-description"
-              className="text-sm font-medium text-gray-700"
-            >
-              Description
-            </label>
-            <textarea
-              id="modal-description"
-              name="description"
-              rows={3}
-              defaultValue={record?.description ?? ""}
-              className="resize-none rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-              placeholder="Optional notes or details…"
-            />
-          </div>
+          {isEditing && (
+            <div className="flex flex-col gap-1">
+              <label
+                htmlFor="modal-description"
+                className="text-sm font-medium text-gray-700"
+              >
+                Description
+              </label>
+              <textarea
+                id="modal-description"
+                name="description"
+                rows={3}
+                defaultValue={record?.description ?? ""}
+                className="resize-none rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                placeholder="Optional notes or details…"
+              />
+            </div>
+          )}
 
           <div className="flex flex-col gap-1">
             <label

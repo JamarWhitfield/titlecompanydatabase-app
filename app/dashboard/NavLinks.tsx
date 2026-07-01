@@ -11,9 +11,11 @@ const links = [
 
 export default function NavLinks({
   isAdmin = false,
+  isPlatformAdmin = false,
   unreadCount = 0,
 }: {
   isAdmin?: boolean;
+  isPlatformAdmin?: boolean;
   unreadCount?: number;
 }) {
   const pathname = usePathname();
@@ -27,6 +29,9 @@ export default function NavLinks({
         ]
       : []),
     { href: "/dashboard/settings", label: "Settings", exact: false },
+    ...(isPlatformAdmin
+      ? [{ href: "/dashboard/platform", label: "Platform", exact: false }]
+      : []),
   ];
   return (
     <div className="flex gap-1 text-sm">
