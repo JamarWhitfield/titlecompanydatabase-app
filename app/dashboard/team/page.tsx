@@ -5,7 +5,6 @@ import type { Profile, CompanyInvitation } from "@/types/database";
 import InviteForm from "./InviteForm";
 import MembersList from "./MembersList";
 import InvitesList from "./InvitesList";
-import CompanySettings from "./CompanySettings";
 
 export default async function TeamPage() {
   const profile = await getProfile();
@@ -44,8 +43,6 @@ export default async function TeamPage() {
           manage their access.
         </p>
       </div>
-
-      <CompanySettings currentName={profile.companies?.name ?? ""} />
 
       <InviteForm />
 

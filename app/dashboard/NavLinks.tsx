@@ -26,6 +26,7 @@ export default function NavLinks({
           { href: "/dashboard/audit", label: "Audit Logs", exact: false },
         ]
       : []),
+    { href: "/dashboard/settings", label: "Settings", exact: false },
   ];
   return (
     <div className="flex gap-1 text-sm">
