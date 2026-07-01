@@ -475,6 +475,29 @@ export interface Database {
         Args: { search_query: string };
         Returns: Database["public"]["Views"]["shared_records_network"]["Row"][];
       };
+      // Billable, application-level storage for the caller's company, summed
+      // from record_files.size (database metadata — never bucket inspection).
+      get_company_storage_usage: {
+        Args: Record<string, never>;
+        Returns: {
+          total_bytes: number;
+          file_count: number;
+        }[];
+      };
+      // Owner-only, read-only reconciliation report. Flags record_files rows
+      // whose storage object is missing, and storage objects with no matching
+      // record_files row. Never deletes anything.
+      check_company_storage_drift: {
+        Args: Record<string, never>;
+        Returns: {
+          issue_type: "missing_object" | "orphaned_object";
+          object_path: string;
+          file_id: string | null;
+          record_id: string | null;
+          file_name: string;
+          size_bytes: number;
+        }[];
+      };
       get_record_audit_trail: {
         Args: { p_record_id: string };
         Returns: {
@@ -528,6 +551,35 @@ export interface Database {
           shared_count: number;
           file_count: number;
         }[];
+      };
+      // Owner-only aggregate usage per company. Storage from
+      // SUM(record_files.size); aggregate numbers only (no file/record detail).
+      platform_list_company_usage: {
+        Args: Record<string, never>;
+        Returns: {
+          id: string;
+          name: string;
+          slug: string;
+          plan: "trial" | "starter" | "growth" | "enterprise";
+          storage_bytes: number;
+          storage_limit_bytes: number | null;
+          user_count: number;
+          user_limit: number | null;
+          record_count: number;
+          record_limit: number | null;
+          file_count: number;
+        }[];
+      };
+      // Owner-only upsert of a company's plan + limits. NULL limit = unlimited.
+      platform_set_company_billing: {
+        Args: {
+          p_company_id: string;
+          p_plan: string;
+          p_storage_limit_bytes?: number | null;
+          p_user_limit?: number | null;
+          p_record_limit?: number | null;
+        };
+        Returns: undefined;
       };
       platform_get_company_details: {
         Args: { p_company_id: string };

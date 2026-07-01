@@ -83,6 +83,48 @@ Up to 5 files per record, 10 MB each. Text extraction is best-effort and never b
 
 ---
 
+### Storage usage & billing reconciliation
+
+Company storage usage (shown to admins in **Settings → Storage usage**) is calculated from **`record_files.size` — database metadata — not by inspecting the Supabase Storage bucket.** Two RPCs support this (migration `0024_storage_usage_reconciliation.sql`):
+
+- `get_company_storage_usage()` → `SUM(record_files.size)` and file count for the caller's company.
+- `check_company_storage_drift()` → owner-only, read-only reconciliation report (never deletes).
+
+Billing-accuracy notes:
+
+- **Usage is calculated from `record_files.size`.** One row per tracked attachment.
+- **This is Casetra's billable, application-level storage** — the bytes the app knowingly wrote on the company's behalf.
+- **Supabase project-level storage may differ slightly**, because it includes every bucket object plus internal/project-level storage (placeholder folder markers, other buckets, overhead). It is not a like-for-like figure and is not used for billing.
+- **A file in Storage with no `record_files` row does not count** toward company usage (`orphaned_object` in the drift report).
+- **A `record_files` row whose object was deleted outside the app still counts** toward usage until cleaned up (`missing_object` in the drift report).
+
+The reconciliation check **reports mismatches only** — it performs no deletion. Automatic billing, overage charges, Stripe integration, plan enforcement, and destructive cleanup are intentionally out of scope. Future maintenance work could act on the drift report, but only via an explicit, human-initiated step.
+
+---
+
+### `company_billing` & the platform usage dashboard
+
+Per-company plan label and monitoring limits, powering the **owner-only** Storage & Usage dashboard at `/dashboard/platform/usage` (migration `0025_company_billing_usage.sql`).
+
+| Column | Type | Notes |
+|--------|------|-------|
+| `company_id` | UUID (PK, FK → companies) | One row per company |
+| `plan` | TEXT | `trial` \| `starter` \| `growth` \| `enterprise` (default `trial`) |
+| `storage_limit_bytes` | BIGINT | NULL = unlimited / not set |
+| `user_limit` | INTEGER | NULL = unlimited |
+| `record_limit` | INTEGER | NULL = unlimited |
+| `updated_at` / `updated_by` | TIMESTAMPTZ / UUID | Audit of last change |
+
+RLS is enabled with **no client write policies** (owners may read; all writes go through the audited RPC). Two owner-only `SECURITY DEFINER` RPCs back the dashboard:
+
+- `platform_list_company_usage()` → aggregate per-company usage: storage (`SUM(record_files.size)`), users, records, files, plus plan + limits. **Aggregate numbers only** — no file paths, names, `content_text`, record titles, or signed URLs are ever returned.
+- `platform_set_company_billing(company_id, plan, storage_limit_bytes, user_limit, record_limit)` → owner-only upsert of a company's plan + limits, written to the platform audit trail. Support and auditor roles cannot call it.
+
+**Overage** is displayed as a quantity over the configured limit (bytes / users / records) for monitoring only. There is no Stripe, automatic billing, automatic overage charging, or plan enforcement.
+
+---
+
+
 ### `record_notes`
 
 Free-text notes attached to a record.

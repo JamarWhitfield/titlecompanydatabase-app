@@ -11,7 +11,10 @@ export default function PlatformNav({ isOwner }: { isOwner: boolean }) {
     { href: "/dashboard/platform/support", label: "Support", exact: false },
     { href: "/dashboard/platform/audit", label: "Platform Audit", exact: false },
     ...(isOwner
-      ? [{ href: "/dashboard/platform/admins", label: "Admins", exact: false }]
+      ? [
+          { href: "/dashboard/platform/usage", label: "Usage", exact: false },
+          { href: "/dashboard/platform/admins", label: "Admins", exact: false },
+        ]
       : []),
   ];
 
