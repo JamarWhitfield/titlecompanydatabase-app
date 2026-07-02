@@ -54,6 +54,9 @@ export default function RecordsList({
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editingRecord, setEditingRecord] = useState<CompanyRecord | null>(null);
+  // Bumped on every open so the modal fully remounts, resetting useActionState
+  // (and any echoed error values) for a clean form each time.
+  const [openSession, setOpenSession] = useState(0);
   const [query, setQuery] = useState(initialQuery);
 
   // ── Bulk selection ─────────────────────────────────────────────────────────
@@ -203,11 +206,13 @@ export default function RecordsList({
 
   function openCreate() {
     setEditingRecord(null);
+    setOpenSession((n) => n + 1);
     setModalOpen(true);
   }
 
   function openEdit(record: CompanyRecord) {
     setEditingRecord(record);
+    setOpenSession((n) => n + 1);
     setModalOpen(true);
   }
 
@@ -428,10 +433,10 @@ export default function RecordsList({
         />
       )}
 
-      {/* key forces the modal to fully remount when switching create ↔ edit,
-          resetting useActionState and defaultValues */}
+      {/* key forces the modal to fully remount when switching create ↔ edit
+          and on every open, resetting useActionState and defaultValues */}
       <RecordFormModal
-        key={editingRecord?.id ?? "new"}
+        key={`${editingRecord?.id ?? "new"}-${openSession}`}
         open={modalOpen}
         onClose={handleClose}
         record={editingRecord}

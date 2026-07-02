@@ -117,7 +117,7 @@ export default function RecordFormModal({ open, onClose, record, files }: Props)
               name="title"
               type="text"
               required
-              defaultValue={record?.title ?? ""}
+              defaultValue={state?.values?.title ?? record?.title ?? ""}
               className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
               placeholder="e.g. 123 Main St — Lien Search"
             />
@@ -133,7 +133,9 @@ export default function RecordFormModal({ open, onClose, record, files }: Props)
             <select
               id="modal-type"
               name="record_type"
-              defaultValue={record?.record_type ?? "abstract"}
+              defaultValue={
+                state?.values?.record_type ?? record?.record_type ?? "abstract"
+              }
               className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
             >
               <option value="abstract">Abstract</option>
@@ -152,7 +154,7 @@ export default function RecordFormModal({ open, onClose, record, files }: Props)
               <select
                 id="modal-state"
                 name="state"
-                defaultValue={record?.state ?? ""}
+                defaultValue={state?.values?.state ?? record?.state ?? ""}
                 className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
               >
                 <option value="">— Select state —</option>
@@ -173,7 +175,7 @@ export default function RecordFormModal({ open, onClose, record, files }: Props)
                 id="modal-county"
                 name="county"
                 type="text"
-                defaultValue={record?.county ?? ""}
+                defaultValue={state?.values?.county ?? record?.county ?? ""}
                 placeholder="e.g. Jefferson"
                 className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
               />
@@ -192,7 +194,9 @@ export default function RecordFormModal({ open, onClose, record, files }: Props)
                 id="modal-description"
                 name="description"
                 rows={3}
-                defaultValue={record?.description ?? ""}
+                defaultValue={
+                  state?.values?.description ?? record?.description ?? ""
+                }
                 className="resize-none rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                 placeholder="Optional notes or details…"
               />

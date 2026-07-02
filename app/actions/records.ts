@@ -5,7 +5,17 @@ import { getProfile } from "@/lib/dal";
 import { extractFileText } from "@/lib/extractText";
 import { revalidatePath } from "next/cache";
 
-export type RecordState = { error?: string; success?: boolean } | undefined;
+export type RecordValues = {
+  title: string;
+  description: string;
+  record_type: string;
+  county: string;
+  state: string;
+};
+
+export type RecordState =
+  | { error?: string; success?: boolean; values?: RecordValues }
+  | undefined;
 
 const PATH = "/dashboard/records";
 const BUCKET = "record-files";
@@ -16,25 +26,41 @@ const MAX_DESCRIPTION = 2000;
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
 const MAX_FILES = 5;
 
+// Echo the user's typed values back to the client so a failed submit can keep
+// the form populated instead of wiping it.
+function readValues(formData: FormData): RecordValues {
+  return {
+    title: (formData.get("title") as string) ?? "",
+    description: (formData.get("description") as string) ?? "",
+    record_type: (formData.get("record_type") as string) || "abstract",
+    county: (formData.get("county") as string) ?? "",
+    state: (formData.get("state") as string) ?? "",
+  };
+}
+
 async function uploadFiles(
   supabase: Awaited<ReturnType<typeof createClient>>,
   companyId: string,
   recordId: string,
   formData: FormData
-): Promise<string | null> {
+): Promise<{ error?: string; savedAny: boolean }> {
   const files = formData.getAll("files") as File[];
   const validFiles = files.filter((f) => f.size > 0);
 
-  if (validFiles.length === 0) return null;
+  if (validFiles.length === 0) return { savedAny: false };
   if (validFiles.length > MAX_FILES)
-    return `Maximum ${MAX_FILES} files per record.`;
+    return { error: `Maximum ${MAX_FILES} files per record.`, savedAny: false };
 
   for (const file of validFiles) {
     if (file.size > MAX_FILE_SIZE)
-      return `"${file.name}" exceeds the 10 MB limit.`;
+      return {
+        error: `"${file.name}" exceeds the 10 MB limit.`,
+        savedAny: false,
+      };
   }
 
   const failed: string[] = [];
+  let saved = 0;
 
   for (const file of validFiles) {
     const ext = file.name.includes(".") ? file.name.split(".").pop() : "";
@@ -70,16 +96,21 @@ async function uploadFiles(
       // Remove the now-orphaned storage object so it isn't left dangling.
       await supabase.storage.from(BUCKET).remove([path]);
       failed.push(file.name);
+      continue;
     }
+
+    saved++;
   }
 
   if (failed.length > 0) {
-    return failed.length === validFiles.length
-      ? "Attachments could not be saved. Please check your connection and try again."
-      : `Some attachments failed to save: ${failed.join(", ")}.`;
+    const error =
+      failed.length === validFiles.length
+        ? "Attachments could not be saved. Please check your connection and try again."
+        : `Some attachments failed to save: ${failed.join(", ")}.`;
+    return { error, savedAny: saved > 0 };
   }
 
-  return null;
+  return { savedAny: saved > 0 };
 }
 
 // ── Create ─────────────────────────────────────────────────────────────────
@@ -97,21 +128,26 @@ export async function createRecord(
   const county = (formData.get("county") as string)?.trim() || null;
   const state = (formData.get("state") as string)?.trim() || null;
 
-  if (!title) return { error: "Title is required." };
+  const values = readValues(formData);
+
+  if (!title) return { error: "Title is required.", values };
   if (title.length > MAX_TITLE)
-    return { error: `Title must be under ${MAX_TITLE} characters.` };
+    return { error: `Title must be under ${MAX_TITLE} characters.`, values };
   if (description && description.length > MAX_DESCRIPTION)
-    return { error: `Description must be under ${MAX_DESCRIPTION} characters.` };
+    return {
+      error: `Description must be under ${MAX_DESCRIPTION} characters.`,
+      values,
+    };
   if (!(ALLOWED_TYPES as readonly string[]).includes(record_type))
-    return { error: "Invalid record type." };
+    return { error: "Invalid record type.", values };
 
   // Pre-validate files before creating the record
   const files = (formData.getAll("files") as File[]).filter((f) => f.size > 0);
   if (files.length > MAX_FILES)
-    return { error: `Maximum ${MAX_FILES} files per record.` };
+    return { error: `Maximum ${MAX_FILES} files per record.`, values };
   for (const file of files) {
     if (file.size > MAX_FILE_SIZE)
-      return { error: `"${file.name}" exceeds the 10 MB limit.` };
+      return { error: `"${file.name}" exceeds the 10 MB limit.`, values };
   }
 
   const supabase = await createClient();
@@ -131,16 +167,24 @@ export async function createRecord(
 
   if (error || !data) {
     console.error("Failed to create record:", error?.message, error?.details, error?.hint);
-    return { error: "Failed to create record." };
+    return { error: "Failed to create record.", values };
   }
 
-  const fileError = await uploadFiles(
+  const upload = await uploadFiles(
     supabase,
     profile.company_id,
     data.id,
     formData
   );
-  if (fileError) return { error: fileError };
+  if (upload.error) {
+    // If nothing was attached, roll back the just-created record so a failed
+    // upload never leaves an orphan record behind. The user keeps their
+    // filled-in form and can retry.
+    if (!upload.savedAny) {
+      await supabase.from("company_records").delete().eq("id", data.id);
+    }
+    return { error: upload.error, values };
+  }
 
   revalidatePath(PATH);
   return { success: true };
@@ -162,22 +206,27 @@ export async function updateRecord(
   const county = (formData.get("county") as string)?.trim() || null;
   const state = (formData.get("state") as string)?.trim() || null;
 
-  if (!id) return { error: "Record ID is missing." };
-  if (!title) return { error: "Title is required." };
+  const values = readValues(formData);
+
+  if (!id) return { error: "Record ID is missing.", values };
+  if (!title) return { error: "Title is required.", values };
   if (title.length > MAX_TITLE)
-    return { error: `Title must be under ${MAX_TITLE} characters.` };
+    return { error: `Title must be under ${MAX_TITLE} characters.`, values };
   if (description && description.length > MAX_DESCRIPTION)
-    return { error: `Description must be under ${MAX_DESCRIPTION} characters.` };
+    return {
+      error: `Description must be under ${MAX_DESCRIPTION} characters.`,
+      values,
+    };
   if (!(ALLOWED_TYPES as readonly string[]).includes(record_type))
-    return { error: "Invalid record type." };
+    return { error: "Invalid record type.", values };
 
   // Pre-validate files
   const files = (formData.getAll("files") as File[]).filter((f) => f.size > 0);
   if (files.length > MAX_FILES)
-    return { error: `Maximum ${MAX_FILES} files per record.` };
+    return { error: `Maximum ${MAX_FILES} files per record.`, values };
   for (const file of files) {
     if (file.size > MAX_FILE_SIZE)
-      return { error: `"${file.name}" exceeds the 10 MB limit.` };
+      return { error: `"${file.name}" exceeds the 10 MB limit.`, values };
   }
 
   const supabase = await createClient();
@@ -187,12 +236,13 @@ export async function updateRecord(
     .eq("id", id)
     .select("id");
 
-  if (error) return { error: "Failed to update record." };
-  if (!data || data.length === 0) return { error: "Record not found." };
+  if (error) return { error: "Failed to update record.", values };
+  if (!data || data.length === 0)
+    return { error: "Record not found.", values };
 
   if (files.length > 0) {
-    const fileError = await uploadFiles(supabase, profile.company_id, id, formData);
-    if (fileError) return { error: fileError };
+    const upload = await uploadFiles(supabase, profile.company_id, id, formData);
+    if (upload.error) return { error: upload.error, values };
   }
 
   revalidatePath(PATH);
