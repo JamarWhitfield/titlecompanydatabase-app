@@ -2,7 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { getProfile } from "@/lib/dal";
-import { extractFileText } from "@/lib/extractText";
+import { extractFileTextSafe } from "@/lib/extractText";
 import { revalidatePath } from "next/cache";
 
 export type RecordValues = {
@@ -67,6 +67,16 @@ async function uploadFiles(
     const uniqueName = `${crypto.randomUUID()}${ext ? `.${ext}` : ""}`;
     const path = `${companyId}/${recordId}/${uniqueName}`;
 
+    // Extract text FIRST, time-bounded. This used to run *between* the storage
+    // upload and the metadata insert, unbounded — a slow/stalled extraction
+    // (large PDF, heavy OCR) could exceed the serverless function time limit
+    // and kill the request AFTER the object was uploaded but BEFORE the row was
+    // inserted, leaving "a record created without its file". extractFileTextSafe
+    // can never hang and returns "" on any failure/timeout, so extraction can
+    // never block or fail the attachment. Doing it before the upload also means
+    // a timeout leaves no orphaned storage object to clean up.
+    const content_text = (await extractFileTextSafe(file)) || null;
+
     const { error: uploadError } = await supabase.storage
       .from(BUCKET)
       .upload(path, file, { contentType: file.type || "application/octet-stream" });
@@ -76,10 +86,6 @@ async function uploadFiles(
       failed.push(file.name);
       continue;
     }
-
-    // Extract text contents so the file is searchable (best-effort — a failed
-    // extraction must never block the upload itself).
-    const content_text = (await extractFileText(file)) || null;
 
     const { error: insertError } = await supabase.from("record_files").insert({
       company_id: companyId,
@@ -105,8 +111,10 @@ async function uploadFiles(
   if (failed.length > 0) {
     const error =
       failed.length === validFiles.length
-        ? "Attachments could not be saved. Please check your connection and try again."
-        : `Some attachments failed to save: ${failed.join(", ")}.`;
+        ? "Attachments could not be saved. Please try again."
+        : `Some attachments couldn't be saved: ${failed.join(
+            ", "
+          )}. The record and any other files were saved.`;
     return { error, savedAny: saved > 0 };
   }
 
@@ -182,6 +190,11 @@ export async function createRecord(
     // filled-in form and can retry.
     if (!upload.savedAny) {
       await supabase.from("company_records").delete().eq("id", data.id);
+      return {
+        error:
+          "The record wasn't created because its attachment couldn't be uploaded. Please try again.",
+        values,
+      };
     }
     return { error: upload.error, values };
   }

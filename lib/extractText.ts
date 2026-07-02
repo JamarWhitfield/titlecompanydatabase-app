@@ -15,7 +15,16 @@ import "server-only";
 // heavier pipeline (and is better run as a background job), so it is not done
 // here — upload a page image directly if you need OCR of a scanned page.
 
-const MAX_TEXT = 1_000_000; // cap stored text at ~1 MB
+// Cap stored extracted text. This is deliberately well under 1 MB: record_files
+// has a STORED generated `fts` column (to_tsvector('english', content_text) —
+// see migration 0005), and Postgres rejects any tsvector larger than 1 MB
+// ("string is too long for tsvector"). A tsvector is LARGER than its source
+// text, so a ~1 MB content_text (e.g. a dense 30-page PDF) overflows the limit
+// and the whole metadata insert fails — which surfaced as "Attachments could
+// not be saved". 500 KB of text yields a tsvector comfortably under 1 MB while
+// still indexing the vast majority of any realistic document. Migration 0031
+// additionally caps the tsvector input at the DB layer as defense in depth.
+const MAX_TEXT = 500_000;
 
 function clamp(text: string): string {
   const normalized = (text ?? "").replace(/\s+/g, " ").trim();
@@ -83,5 +92,35 @@ export async function extractFileText(file: File): Promise<string> {
       err instanceof Error ? err.message : err
     );
     return "";
+  }
+}
+
+// Best-effort AND time-bounded wrapper around extractFileText. It never throws
+// and never hangs the caller: any error OR exceeding `timeoutMs` resolves to ""
+// so a slow/failed extraction (e.g. a large scanned PDF, or heavy OCR that
+// stalls on serverless) can NEVER block or fail a file upload. Callers must
+// save the file + its metadata row FIRST, then enrich with the returned text
+// (see app/actions/records.ts). Extraction is intentionally capped here rather
+// than allowed to run away and hit the serverless function time limit.
+export async function extractFileTextSafe(
+  file: File,
+  timeoutMs = 15_000
+): Promise<string> {
+  const work = extractFileText(file);
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<string>((resolve) => {
+    timer = setTimeout(() => {
+      console.error(
+        `Text extraction timed out after ${timeoutMs}ms for`,
+        file.name || "(unnamed)"
+      );
+      resolve("");
+    }, timeoutMs);
+    timer.unref?.();
+  });
+  try {
+    return await Promise.race([work, timeout]);
+  } finally {
+    if (timer) clearTimeout(timer);
   }
 }
