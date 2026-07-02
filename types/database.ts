@@ -133,6 +133,184 @@ export type Notification = {
 };
 
 // ============================================================
+// Feedback / "Send Feedback" system (see migration 0028)
+// ============================================================
+
+export type FeedbackType =
+  | "bug"
+  | "feature_request"
+  | "confusing_ux"
+  | "data_import_issue"
+  | "other";
+
+export type FeedbackCategory =
+  | "general"
+  | "search_issue"
+  | "upload_issue"
+  | "permission_issue"
+  | "file_download_issue"
+  | "record_issue"
+  | "network_sharing_issue"
+  | "data_import_issue"
+  | "feature_request"
+  | "confusing_ui"
+  | "other";
+
+export type FeedbackSeverity = "low" | "medium" | "high" | "critical";
+
+export type FeedbackStatus =
+  | "open"
+  | "in_review"
+  | "in_progress"
+  | "fixed"
+  | "closed"
+  | "wont_fix"
+  | "need_more_info";
+
+// A submitted feedback report (bug, feature request, etc.). Belongs to the
+// reporter's company; managed cross-tenant only by platform admins.
+export type FeedbackReport = {
+  id: string;
+  company_id: string;
+  reporter_id: string;
+  feedback_type: FeedbackType;
+  category: FeedbackCategory;
+  severity: FeedbackSeverity;
+  status: FeedbackStatus;
+  title: string;
+  description: string;
+  expected_behavior: string | null;
+  page_url: string | null;
+  pathname: string | null;
+  related_resource_url: string | null;
+  related_record_id: string | null;
+  related_file_id: string | null;
+  browser_user_agent: string | null;
+  browser_language: string | null;
+  browser_platform: string | null;
+  screen_width: number | null;
+  screen_height: number | null;
+  viewport_width: number | null;
+  viewport_height: number | null;
+  screenshot_storage_path: string | null;
+  screenshot_original_filename: string | null;
+  screenshot_mime_type: string | null;
+  screenshot_size_bytes: number | null;
+  resolved_at: string | null;
+  resolved_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+// One row per status transition (append-only). old_status is null for the
+// initial creation row.
+export type FeedbackStatusHistory = {
+  id: string;
+  feedback_report_id: string;
+  changed_by: string;
+  old_status: FeedbackStatus | null;
+  new_status: FeedbackStatus;
+  note: string | null;
+  created_at: string;
+};
+
+// A platform-admin-only private note attached to a feedback report.
+export type FeedbackInternalNote = {
+  id: string;
+  feedback_report_id: string;
+  author_id: string;
+  note: string;
+  created_at: string;
+  updated_at: string;
+};
+
+// A row of the platform-admin Feedback dashboard, as returned by the
+// platform_list_feedback RPC (company + reporter resolved). Never includes
+// screenshot paths or internal notes.
+export type FeedbackListItem = {
+  id: string;
+  company_id: string;
+  company_name: string | null;
+  reporter_id: string;
+  reporter_name: string | null;
+  reporter_email: string | null;
+  feedback_type: FeedbackType;
+  category: FeedbackCategory;
+  severity: FeedbackSeverity;
+  status: FeedbackStatus;
+  title: string;
+  page_url: string | null;
+  pathname: string | null;
+  has_screenshot: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+// The full feedback report shown on the platform-admin detail page, as
+// returned by platform_get_feedback (company/reporter/resolver resolved). The
+// screenshot STORAGE PATH is never included — the page mints a signed URL
+// separately via the service role.
+export type FeedbackDetail = {
+  id: string;
+  company_id: string;
+  company_name: string | null;
+  reporter_id: string;
+  reporter_name: string | null;
+  reporter_email: string | null;
+  feedback_type: FeedbackType;
+  category: FeedbackCategory;
+  severity: FeedbackSeverity;
+  status: FeedbackStatus;
+  title: string;
+  description: string;
+  expected_behavior: string | null;
+  page_url: string | null;
+  pathname: string | null;
+  related_resource_url: string | null;
+  related_record_id: string | null;
+  related_file_id: string | null;
+  browser_user_agent: string | null;
+  browser_language: string | null;
+  browser_platform: string | null;
+  screen_width: number | null;
+  screen_height: number | null;
+  viewport_width: number | null;
+  viewport_height: number | null;
+  has_screenshot: boolean;
+  screenshot_original_filename: string | null;
+  screenshot_mime_type: string | null;
+  screenshot_size_bytes: number | null;
+  resolved_at: string | null;
+  resolved_by: string | null;
+  resolved_by_name: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+// A resolved status-history row for the detail page.
+export type FeedbackHistoryItem = {
+  id: string;
+  old_status: FeedbackStatus | null;
+  new_status: FeedbackStatus;
+  note: string | null;
+  changed_by: string;
+  changed_by_name: string | null;
+  changed_by_email: string | null;
+  created_at: string;
+};
+
+// A resolved internal-note row for the detail page.
+export type FeedbackNoteItem = {
+  id: string;
+  note: string;
+  author_id: string;
+  author_name: string | null;
+  author_email: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+// ============================================================
 // Platform Admin Console (see migration 0023)
 // ============================================================
 
@@ -444,6 +622,130 @@ export interface Database {
         };
         Relationships: [];
       };
+      feedback_reports: {
+        Row: {
+          id: string;
+          company_id: string;
+          reporter_id: string;
+          feedback_type: string;
+          category: string;
+          severity: string;
+          status: string;
+          title: string;
+          description: string;
+          expected_behavior: string | null;
+          page_url: string | null;
+          pathname: string | null;
+          related_resource_url: string | null;
+          related_record_id: string | null;
+          related_file_id: string | null;
+          browser_user_agent: string | null;
+          browser_language: string | null;
+          browser_platform: string | null;
+          screen_width: number | null;
+          screen_height: number | null;
+          viewport_width: number | null;
+          viewport_height: number | null;
+          screenshot_storage_path: string | null;
+          screenshot_original_filename: string | null;
+          screenshot_mime_type: string | null;
+          screenshot_size_bytes: number | null;
+          resolved_at: string | null;
+          resolved_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          company_id: string;
+          reporter_id: string;
+          feedback_type: string;
+          category?: string;
+          severity?: string;
+          status?: string;
+          title: string;
+          description: string;
+          expected_behavior?: string | null;
+          page_url?: string | null;
+          pathname?: string | null;
+          related_resource_url?: string | null;
+          related_record_id?: string | null;
+          related_file_id?: string | null;
+          browser_user_agent?: string | null;
+          browser_language?: string | null;
+          browser_platform?: string | null;
+          screen_width?: number | null;
+          screen_height?: number | null;
+          viewport_width?: number | null;
+          viewport_height?: number | null;
+          screenshot_storage_path?: string | null;
+          screenshot_original_filename?: string | null;
+          screenshot_mime_type?: string | null;
+          screenshot_size_bytes?: number | null;
+          resolved_at?: string | null;
+          resolved_by?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          status?: string;
+          category?: string;
+          severity?: string;
+          screenshot_storage_path?: string | null;
+          screenshot_original_filename?: string | null;
+          screenshot_mime_type?: string | null;
+          screenshot_size_bytes?: number | null;
+          resolved_at?: string | null;
+          resolved_by?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      feedback_status_history: {
+        Row: {
+          id: string;
+          feedback_report_id: string;
+          changed_by: string;
+          old_status: string | null;
+          new_status: string;
+          note: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          feedback_report_id: string;
+          changed_by: string;
+          old_status?: string | null;
+          new_status: string;
+          note?: string | null;
+          created_at?: string;
+        };
+        Update: never;
+        Relationships: [];
+      };
+      feedback_internal_notes: {
+        Row: {
+          id: string;
+          feedback_report_id: string;
+          author_id: string;
+          note: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          feedback_report_id: string;
+          author_id: string;
+          note: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          note?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
     };
     Views: {
       shared_records_network: {
@@ -618,6 +920,91 @@ export interface Database {
       platform_list_platform_audit_logs: {
         Args: Record<string, never>;
         Returns: PlatformAuditLog[];
+      };
+      platform_list_feedback: {
+        Args: Record<string, never>;
+        Returns: {
+          id: string;
+          company_id: string;
+          company_name: string | null;
+          reporter_id: string;
+          reporter_name: string | null;
+          reporter_email: string | null;
+          feedback_type: string;
+          category: string;
+          severity: string;
+          status: string;
+          title: string;
+          page_url: string | null;
+          pathname: string | null;
+          has_screenshot: boolean;
+          created_at: string;
+          updated_at: string;
+        }[];
+      };
+      platform_get_feedback: {
+        Args: { p_id: string };
+        Returns: {
+          id: string;
+          company_id: string;
+          company_name: string | null;
+          reporter_id: string;
+          reporter_name: string | null;
+          reporter_email: string | null;
+          feedback_type: string;
+          category: string;
+          severity: string;
+          status: string;
+          title: string;
+          description: string;
+          expected_behavior: string | null;
+          page_url: string | null;
+          pathname: string | null;
+          related_resource_url: string | null;
+          related_record_id: string | null;
+          related_file_id: string | null;
+          browser_user_agent: string | null;
+          browser_language: string | null;
+          browser_platform: string | null;
+          screen_width: number | null;
+          screen_height: number | null;
+          viewport_width: number | null;
+          viewport_height: number | null;
+          has_screenshot: boolean;
+          screenshot_original_filename: string | null;
+          screenshot_mime_type: string | null;
+          screenshot_size_bytes: number | null;
+          resolved_at: string | null;
+          resolved_by: string | null;
+          resolved_by_name: string | null;
+          created_at: string;
+          updated_at: string;
+        }[];
+      };
+      platform_list_feedback_history: {
+        Args: { p_id: string };
+        Returns: {
+          id: string;
+          old_status: string | null;
+          new_status: string;
+          note: string | null;
+          changed_by: string;
+          changed_by_name: string | null;
+          changed_by_email: string | null;
+          created_at: string;
+        }[];
+      };
+      platform_list_feedback_notes: {
+        Args: { p_id: string };
+        Returns: {
+          id: string;
+          note: string;
+          author_id: string;
+          author_name: string | null;
+          author_email: string | null;
+          created_at: string;
+          updated_at: string;
+        }[];
       };
       platform_list_admins: {
         Args: Record<string, never>;

@@ -8,6 +8,7 @@ export default function PlatformNav({ isOwner }: { isOwner: boolean }) {
   const tabs = [
     { href: "/dashboard/platform", label: "Overview", exact: true },
     { href: "/dashboard/platform/companies", label: "Companies", exact: false },
+    { href: "/dashboard/platform/bugs", label: "Feedback", exact: false },
     { href: "/dashboard/platform/support", label: "Support", exact: false },
     { href: "/dashboard/platform/audit", label: "Platform Audit", exact: false },
     ...(isOwner

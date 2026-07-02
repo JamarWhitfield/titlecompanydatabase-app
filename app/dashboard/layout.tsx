@@ -4,6 +4,7 @@ import { getCurrentPlatformRole } from "@/lib/platform-auth";
 import { createClient } from "@/lib/supabase/server";
 import { logout } from "@/app/actions/auth";
 import NavLinks from "./NavLinks";
+import FeedbackButton from "./FeedbackButton";
 
 export default async function DashboardLayout({
   children,
@@ -75,6 +76,9 @@ export default async function DashboardLayout({
       </nav>
 
       <main className="flex-1 px-4 py-8 sm:px-6 lg:px-8">{children}</main>
+
+      {/* Floating "Send Feedback" entry point — available on every dashboard page. */}
+      <FeedbackButton />
     </div>
   );
 }

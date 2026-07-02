@@ -22,6 +22,7 @@ export default function NavLinks({
   const navLinks = [
     ...links,
     { href: "/dashboard/notifications", label: "Notifications", exact: false },
+    { href: "/dashboard/feedback", label: "My Feedback", exact: false },
     ...(isAdmin
       ? [
           { href: "/dashboard/team", label: "Team", exact: false },
