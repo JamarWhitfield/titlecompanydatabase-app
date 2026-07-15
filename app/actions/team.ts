@@ -2,6 +2,7 @@
 
 import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin"; // ← add this
 import { getProfile } from "@/lib/dal";
 import { sendInvitationEmail } from "@/lib/email";
 import { revalidatePath } from "next/cache";
@@ -196,6 +197,7 @@ export async function setMemberRole(
   return {};
 }
 
+/*
 // Remove (kick) a teammate from the caller's company. The remove_member RPC
 // enforces every guard at the database level: the caller must be an admin of
 // the same company, the target must belong to that company, and the last
@@ -220,6 +222,79 @@ export async function removeMember(
   if (error) {
     // Surface the friendly RPC guard messages (e.g. last-admin protection).
     return { error: error.message || "Failed to remove the member." };
+  }
+
+  revalidatePath("/dashboard/team");
+  return {};
+}
+*/
+// Remove (kick) a teammate from the caller's company. The remove_member RPC
+// enforces every guard at the database level: the caller must be an admin of
+// the same company, the target must belong to that company, and the last
+// remaining admin can never be removed (which also blocks self-removal that
+// would orphan the company). It reassigns the departing member's records and
+// notes to the acting admin and writes a 'member_removed' audit entry.
+//
+// The RPC only deletes the profiles row (company membership) — it deliberately
+// does NOT touch auth.users (see 0017_remove_member.sql). Left alone, the
+// person's login credential survives forever: they vanish from the UI, but
+// re-inviting them later fails with "User already registered" because
+// Supabase Auth still has an account under that email. We close that gap here
+// by revoking the auth account with the service-role Auth admin API immediately
+// after the RPC succeeds.
+export async function removeMember(
+  targetUser: string
+): Promise<{ error?: string }> {
+  const profile = await getProfile();
+  if (!profile) return { error: "Not authenticated." };
+  if (profile.role !== "admin") {
+    return { error: "Only admins can remove members." };
+  }
+  if (!targetUser) return { error: "Member is missing." };
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("remove_member", {
+    target_user: targetUser,
+  });
+
+  if (error) {
+    // Surface the friendly RPC guard messages (e.g. last-admin protection).
+    return { error: error.message || "Failed to remove the member." };
+  }
+
+  // At this point the member is already gone from the company (profile
+  // deleted, records reassigned, audit entry written) — everything below is
+  // best-effort cleanup of their login. A failure here must not look like the
+  // whole removal failed; the admin needs to know the company-side removal
+  // succeeded even if auth cleanup didn't.
+  let admin;
+  try {
+    admin = createAdminClient();
+  } catch (err) {
+    console.error(
+      `Removed ${targetUser} from company but could not create the admin ` +
+        `client to revoke their login:`,
+      err instanceof Error ? err.message : err
+    );
+    revalidatePath("/dashboard/team");
+    return {
+      error:
+        "The member was removed from your company, but their login could not be revoked due to a server configuration issue. They will not be able to sign back in without a new invite, but if you try to re-invite them and it fails with 'already registered', contact support.",
+    };
+  }
+
+  const { error: authError } = await admin.auth.admin.deleteUser(targetUser);
+
+  if (authError) {
+    console.error(
+      `Removed ${targetUser} from company but failed to delete their auth account:`,
+      authError.message
+    );
+    revalidatePath("/dashboard/team");
+    return {
+      error:
+        "The member was removed from your company, but their login could not be fully revoked. If re-inviting them later fails with 'already registered', contact support.",
+    };
   }
 
   revalidatePath("/dashboard/team");
